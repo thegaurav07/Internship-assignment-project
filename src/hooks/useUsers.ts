@@ -58,7 +58,8 @@ export const useUpdateUserStatus = () => {
     },
 
     // Revert on error
-    onError: (err, variables, context) => {
+    // here _err & _variable is used to satisfy the eslint 
+    onError: (_err, _variables, context) => {
       // Rollback to previous state if mutation fails
       if (context?.previousUsers) {
         context.previousUsers.forEach(([queryKey, data]) => {

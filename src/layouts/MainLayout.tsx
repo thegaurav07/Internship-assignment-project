@@ -8,11 +8,12 @@ import {
   Container,
 } from '@mui/material';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import { ErrorBoundary } from '@/components';
 
 /**
  * Main Layout Component
  *
- * Wraps all pages with common header and footer.
+ * Wraps all pages with common header, footer, and error boundary.
  */
 export const MainLayout: React.FC = () => {
   return (
@@ -30,7 +31,9 @@ export const MainLayout: React.FC = () => {
       </AppBar>
 
       <Container component="main" sx={{ flex: 1, py: 3 }} maxWidth="xl">
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </Container>
 
       <Box

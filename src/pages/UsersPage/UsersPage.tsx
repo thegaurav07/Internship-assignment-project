@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useSnackbar } from 'notistack';
-import { DynamicGrid, UserActions } from '@/components';
+import { DynamicGrid, UserActions, ErrorFallback } from '@/components';
 import { useUsers, useUpdateUserStatus } from '@/hooks';
 import { useDebounce } from '@/hooks';
 import { userColumnMetadata } from '@/utils';
@@ -147,12 +147,24 @@ export const UsersPage: React.FC = () => {
     ),
   }));
 
-  // Error state - TODO: Improve error UI
+  // Error state with retry functionality
   if (error) {
+    const isNetworkError = 
+      error.message.includes('fetch') || 
+      error.message.includes('network') ||
+      error.message.includes('NetworkError');
+
     return (
-      <Alert severity="error" sx={{ mt: 2 }}>
-        Failed to load users: {error.message}
-      </Alert>
+      <Box>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Users
+        </Typography>
+        <ErrorFallback
+          error={error as Error}
+          onRetry={() => window.location.reload()}
+          isNetworkError={isNetworkError}
+        />
+      </Box>
     );
   }
 
