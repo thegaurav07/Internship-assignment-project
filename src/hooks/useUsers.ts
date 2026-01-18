@@ -19,11 +19,9 @@ export const useUsers = (params: PaginationParams) => {
 };
 
 /**
- * Hook to update user status
- *
- * BUG: After updating user status, the table doesn't refresh.
- * The user needs to manually refresh to see the updated status.
- * TODO: Fix the cache invalidation issue.
+ * Hook to update user status with optimistic updates
+ * 
+ * Immediately updates the UI before API response, and reverts on error.
  */
 export const useUpdateUserStatus = () => {
   const queryClient = useQueryClient();
@@ -31,10 +29,47 @@ export const useUpdateUserStatus = () => {
   return useMutation({
     mutationFn: ({ userId, status }: { userId: string; status: 'active' | 'inactive' }) =>
       updateUserStatus(userId, status),
-    onSuccess: () => {
-      // BUG FIX: Invalidate all user queries using the proper query key
+    
+    // Optimistic update: Update UI immediately before API call
+    onMutate: async ({ userId, status }) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: userQueryKeys.all });
+
+      // Snapshot the previous value for rollback
+      const previousUsers = queryClient.getQueriesData({ queryKey: userQueryKeys.all });
+
+      // Optimistically update all user query caches
+      queryClient.setQueriesData({ queryKey: userQueryKeys.all }, (old: any) => {
+        if (!old?.data?.users) return old;
+
+        return {
+          ...old,
+          data: {
+            ...old.data,
+            users: old.data.users.map((user: any) =>
+              user.userId === userId ? { ...user, status } : user
+            ),
+          },
+        };
+      });
+
+      // Return context with previous data for rollback
+      return { previousUsers };
+    },
+
+    // Revert on error
+    onError: (err, variables, context) => {
+      // Rollback to previous state if mutation fails
+      if (context?.previousUsers) {
+        context.previousUsers.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
+
+    // Always refetch after error or success to ensure data is in sync
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: userQueryKeys.all });
-      console.log('User status updated successfully');
     },
   });
 };
