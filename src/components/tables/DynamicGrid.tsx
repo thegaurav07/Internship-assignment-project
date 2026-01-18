@@ -4,6 +4,8 @@ import {
   useMaterialReactTable,
   type MRT_ColumnDef,
   type MRT_PaginationState,
+  type MRT_SortingState,
+  type MRT_VisibilityState,
 } from 'material-react-table';
 import { Chip, Box } from '@mui/material';
 import type { ColumnMetadata, User, Group } from '@/types';
@@ -17,6 +19,10 @@ interface DynamicGridProps {
   totalCount: number;
   pagination: MRT_PaginationState;
   onPaginationChange: (pagination: MRT_PaginationState) => void;
+  sorting?: MRT_SortingState;
+  onSortingChange?: (sorting: MRT_SortingState) => void;
+  columnVisibility?: MRT_VisibilityState;
+  onColumnVisibilityChange?: (visibility: MRT_VisibilityState) => void;
   onRowAction?: (user: User, action: string) => void;
 }
 
@@ -93,6 +99,10 @@ export const DynamicGrid: React.FC<DynamicGridProps> = ({
   totalCount,
   pagination,
   onPaginationChange,
+  sorting = [],
+  onSortingChange,
+  columnVisibility = {},
+  onColumnVisibilityChange,
 }) => {
   // Show loading skeleton instead of spinner
   if (isLoading && data.length === 0) {
@@ -120,16 +130,35 @@ export const DynamicGrid: React.FC<DynamicGridProps> = ({
     enableRowSelection: false,
     enableColumnFilters: false,
     enableGlobalFilter: false,
+    enableHiding: true, // Enable column visibility toggle
+    enableSorting: true,
     manualPagination: true,
+    manualSorting: false, // Client-side sorting for now
     rowCount: totalCount,
     state: {
       isLoading: false, // We handle loading with skeleton
       pagination,
+      sorting,
+      columnVisibility,
     },
     onPaginationChange: (updater) => {
       const newPagination =
         typeof updater === 'function' ? updater(pagination) : updater;
       onPaginationChange(newPagination);
+    },
+    onSortingChange: (updater) => {
+      if (onSortingChange) {
+        const newSorting =
+          typeof updater === 'function' ? updater(sorting) : updater;
+        onSortingChange(newSorting);
+      }
+    },
+    onColumnVisibilityChange: (updater) => {
+      if (onColumnVisibilityChange) {
+        const newVisibility =
+          typeof updater === 'function' ? updater(columnVisibility) : updater;
+        onColumnVisibilityChange(newVisibility);
+      }
     },
     muiTableContainerProps: {
       sx: { maxHeight: '600px' },

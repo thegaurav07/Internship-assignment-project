@@ -9,16 +9,14 @@ import {
   Select,
   MenuItem,
   Paper,
-  Alert,
   InputAdornment,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import { useSnackbar } from 'notistack';
 import { DynamicGrid, UserActions, ErrorFallback } from '@/components';
-import { useUsers, useUpdateUserStatus } from '@/hooks';
-import { useDebounce } from '@/hooks';
+import { useUsers, useUpdateUserStatus, useDebounce, useLocalStorage } from '@/hooks';
 import { userColumnMetadata } from '@/utils';
-import type { MRT_PaginationState } from 'material-react-table';
+import type { MRT_PaginationState, MRT_SortingState, MRT_VisibilityState } from 'material-react-table';
 import type { User, ColumnMetadata } from '@/types';
 
 /**
@@ -59,6 +57,22 @@ export const UsersPage: React.FC = () => {
     pageSize: 10,
   });
 
+  // BONUS: Persist column visibility in localStorage
+  const [columnVisibility, setColumnVisibility] = useLocalStorage<MRT_VisibilityState>(
+    'users-table-column-visibility',
+    {} // All columns visible by default
+  );
+
+  // BONUS: Initialize sorting from URL params and persist in URL
+  const [sorting, setSorting] = useState<MRT_SortingState>(() => {
+    const sortParam = searchParams.get('sort');
+    const orderParam = searchParams.get('order');
+    if (sortParam) {
+      return [{ id: sortParam, desc: orderParam === 'desc' }];
+    }
+    return [];
+  });
+
   // BUG FIX: Use debounced search to prevent API calls on every keystroke
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
@@ -70,7 +84,7 @@ export const UsersPage: React.FC = () => {
     status: statusFilter,
   });
 
-  // BUG FIX #3: Update URL params when filters change
+  // BUG FIX #3: Update URL params when filters or sorting change
   useEffect(() => {
     const params: Record<string, string> = {};
     
@@ -84,8 +98,14 @@ export const UsersPage: React.FC = () => {
       params.search = debouncedSearchQuery;
     }
     
+    // BONUS: Persist sort order in URL
+    if (sorting.length > 0) {
+      params.sort = sorting[0].id;
+      params.order = sorting[0].desc ? 'desc' : 'asc';
+    }
+    
     setSearchParams(params, { replace: true });
-  }, [pagination.pageIndex, statusFilter, debouncedSearchQuery, setSearchParams]);
+  }, [pagination.pageIndex, statusFilter, debouncedSearchQuery, sorting, setSearchParams]);
 
   // Update user status mutation
   const { mutate: updateStatus, isPending: isUpdating } = useUpdateUserStatus();
@@ -228,6 +248,10 @@ export const UsersPage: React.FC = () => {
           totalCount={data?.data?.totalCount || 0}
           pagination={pagination}
           onPaginationChange={handlePaginationChange}
+          sorting={sorting}
+          onSortingChange={setSorting}
+          columnVisibility={columnVisibility}
+          onColumnVisibilityChange={setColumnVisibility}
         />
       </Paper>
     </Box>
